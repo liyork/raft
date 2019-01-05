@@ -32,25 +32,28 @@ public class RequestReceive {
         Node localNode = clusterManger.getLocalNode();
 
         int remoteNodeTerm = remoteNode.getTerm();
-        logger.info("receive vote,local ipPort:{},term:{},remote ipPort:{},term:{}",
-                localNode.getIpPort(), localNode.getTerm(), remoteNode.getIpPort(), remoteNodeTerm);
 
         //localNode的term会同leader一样，所以直接比对
         if (remoteNodeTerm > localNode.getTerm()) {
 
-            logger.info("receive vote, remote term is bigger,vote it，and rewait.");
+            logger.info("receive vote,local ipPort:{},term:{},remote ipPort:{},term:{}," +
+                            " remote term is bigger,vote it，and restart wait.",
+                    localNode.getIpPort(), localNode.getTerm(), remoteNode.getIpPort(), remoteNodeTerm);
 
             localNode.setTerm(remoteNodeTerm);
             localNode.setVoteFor(remoteNode);
             //不论什么状态，接收到高投票则同意并降级(非follower)
             localNode.setState(State.FOLLOW);
             //唤醒，让自己重新计数并等待//todo 可能优化，直接重置但是不唤醒
+            //这个类似于Heartbeat，但是稍有不同，因为若是不唤醒，可能会延长整体服务器没有leader的时间！
             synchronized (TimeElection.waitObject) {
-                TimeElection.isNeedRest = true;
+                TimeElection.isNeedContinueWait = true;
                 TimeElection.waitObject.notify();
             }
         } else {
-            logger.info("receive vote, remote term is smaller,not vote it.");
+            logger.info("receive vote,local ipPort:{},term:{},remote ipPort:{},term:{}," +
+                            " remote term is smaller,not vote it.",
+                    localNode.getIpPort(), localNode.getTerm(), remoteNode.getIpPort(), remoteNodeTerm);
         }
 
         return JSON.toJSONString(localNode);
@@ -61,26 +64,30 @@ public class RequestReceive {
 
         Node localNode = clusterManger.getLocalNode();
 
-        int term = remoteNode.getTerm();
-        logger.info("receive heartbeat,remote ipPort:{},term:{},local ipPort:{},term:{}",
-                remoteNode.getIpPort(), term, localNode.getIpPort(), localNode.getTerm());
+        int remoteNodeTerm = remoteNode.getTerm();
 
         //localNode的term会同leader一样，所以直接比对，大于等于则同意
-        if (term >= localNode.getTerm()) {
+        if (remoteNodeTerm >= localNode.getTerm()) {
 
-            logger.info("heartbeat remote term is bigger follower it ，and rewait.");
+            logger.info("receive heartbeat,local ipPort:{},term:{},remote ipPort:{},term:{}," +
+                            " remote term is bigger follower it ，and restart wait.",
+                    localNode.getIpPort(), localNode.getTerm(), remoteNode.getIpPort(), remoteNodeTerm);
 
-            localNode.setTerm(term);
+            localNode.setTerm(remoteNodeTerm);
             localNode.setVoteFor(remoteNode);
             //不论什么状态，接收到高投票则同意并降级(非follower)
             localNode.setState(State.FOLLOW);
             //唤醒，让自己重新计数并等待//todo 可能优化，直接重置但是不唤醒
+            //这个问题同vote方法，为了整体服务器能最快选举出leader，这个先保留
+            //todo 这个能否和vote方法合并？t
             synchronized (TimeElection.waitObject) {
-                TimeElection.isNeedRest = true;
+                TimeElection.isNeedContinueWait = true;
                 TimeElection.waitObject.notify();
             }
         } else {
-            logger.info("heartbeat remote term is smaller,not vote it.");
+            logger.info("receive heartbeat,local ipPort:{},term:{},remote ipPort:{},term:{}," +
+                            " remote term is smaller,not vote it.",
+                    localNode.getIpPort(), localNode.getTerm(), remoteNode.getIpPort(), remoteNodeTerm);
         }
     }
 }

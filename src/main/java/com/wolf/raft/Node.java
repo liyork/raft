@@ -1,5 +1,7 @@
 package com.wolf.raft;
 
+import java.util.Objects;
+
 /**
  * Description:
  * <br/> Created on 12/29/2018
@@ -58,6 +60,22 @@ public class Node {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Node node = (Node) o;
+        return term == node.term &&
+                Objects.equals(voteFor, node.voteFor) &&
+                Objects.equals(ipPort, node.ipPort) &&
+                state == node.state;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(voteFor, term, ipPort, state);
+    }
+
+    @Override
     public String toString() {
 
         String voteForStr = null;
@@ -66,9 +84,9 @@ public class Node {
                 voteForStr = ", voteFor{ self}";
             } else {
                 voteForStr = ", voteFor{" +
-                        " term=" + term +
-                        ", ipPort='" + ipPort + '\'' +
-                        ", state=" + state +
+                        " term=" + voteFor.term +
+                        ", ipPort='" + voteFor.ipPort + '\'' +
+                        ", state=" + voteFor.state +
                         '}';
             }
         }

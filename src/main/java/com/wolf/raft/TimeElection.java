@@ -24,7 +24,7 @@ public class TimeElection {
     @Autowired
     private ClusterManger clusterManger;
 
-    protected static boolean isNeedRest;
+    protected static boolean isNeedContinueWait;
 
     private static long sleepNanos;
 
@@ -47,7 +47,7 @@ public class TimeElection {
 
                         long sleepMill = TimeUnit.MILLISECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS);
                         //应该醒来时间,用于再次醒来时重新计算还需睡眠时间
-                        logger.info("{} term before wait, systemnano:{},wait sleepSecond:{}",
+                        logger.info("{} term start wait, systemnano:{},wait sleepSecond:{}",
                                 localNodeTerm, System.nanoTime(), TimeUnit.SECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS));
 
                         try {
@@ -56,16 +56,17 @@ public class TimeElection {
                             e.printStackTrace();
                         }
 
-                        logger.info("{} term after wait, systemnano:{}", localNodeTerm, System.nanoTime());
-
-                        if (isNeedRest) {
-                            logger.info("receive notify me,isNeedRest:" + isNeedRest);
-                            isNeedRest = false;
-                            //接收到vote或者心跳后，需要重新睡眠，不需要重新生成睡眠时间
+                        if (isNeedContinueWait) {
+                            isNeedContinueWait = false;
+                            //接收到vote或者心跳后，需要重新睡眠，不需要重新生成睡眠时间，
+                            // 因为就是简单的为了让他继续睡眠，若是没人提醒他，那么下次唤醒后就是发起投票了
                             //sleepNanos = TimeHelper.genElectionTime();
                         } else {
                             sleepNanos = 0;
                         }
+
+                        logger.info("{} term end wait, systemnano:{},sleepNanos:{}",
+                                localNodeTerm, System.nanoTime(), sleepNanos);
                     }
                 }
 
