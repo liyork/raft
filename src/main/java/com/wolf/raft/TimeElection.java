@@ -28,7 +28,7 @@ public class TimeElection {
 
     private static long sleepNanos;
 
-    protected static final Object waitObject = new Object();
+    private static final Object timeElectionLock = new Object();
 
     public void init() {
 
@@ -41,33 +41,33 @@ public class TimeElection {
             for (; ; ) {
 
                 while (sleepNanos > 0) {
-                    synchronized (waitObject) {
 
-                        int localNodeTerm = localNode.getTerm();
+                    int localNodeTerm = localNode.getTerm();
 
-                        long sleepMill = TimeUnit.MILLISECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS);
-                        //应该醒来时间,用于再次醒来时重新计算还需睡眠时间
-                        logger.info("{} term start wait, systemnano:{},wait sleepSecond:{}",
-                                localNodeTerm, System.nanoTime(), TimeUnit.SECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS));
+                    long sleepMill = TimeUnit.MILLISECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS);
+                    //应该醒来时间,用于再次醒来时重新计算还需睡眠时间
+                    logger.info("{} term start wait, systemnano:{},wait sleepSecond:{}",
+                            localNodeTerm, System.nanoTime(), TimeUnit.SECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS));
 
+                    synchronized (timeElectionLock) {
                         try {
-                            waitObject.wait(sleepMill);
+                            timeElectionLock.wait(sleepMill);
                         } catch (InterruptedException e) {
-                            e.printStackTrace();
+                            logger.error("timeElection wait sleepMill:" + sleepMill + "was interrupted", e);
                         }
-
-                        if (isNeedContinueWait) {
-                            isNeedContinueWait = false;
-                            //接收到vote或者心跳后，需要重新睡眠，不需要重新生成睡眠时间，
-                            // 因为就是简单的为了让他继续睡眠，若是没人提醒他，那么下次唤醒后就是发起投票了
-                            //sleepNanos = TimeHelper.genElectionTime();
-                        } else {
-                            sleepNanos = 0;
-                        }
-
-                        logger.info("{} term end wait, systemnano:{},sleepNanos:{}",
-                                localNodeTerm, System.nanoTime(), sleepNanos);
                     }
+
+                    if (isNeedContinueWait) {
+                        isNeedContinueWait = false;
+                        //接收到vote或者心跳后，需要重新睡眠，不需要重新生成睡眠时间，
+                        // 因为就是简单的为了让他继续睡眠，若是没人提醒他，那么下次唤醒后就是发起投票了
+                        //sleepNanos = TimeHelper.genElectionTime();
+                    } else {
+                        sleepNanos = 0;
+                    }
+
+                    logger.info("{} term end wait, systemnano:{},sleepNanos:{}",
+                            localNodeTerm, System.nanoTime(), sleepNanos);
                 }
 
                 localNode.setState(State.CANDIDATE);
@@ -105,5 +105,15 @@ public class TimeElection {
                 }
             }
         }).start();
+    }
+
+    protected void resetElectionTime(boolean isImmediately) {
+
+        synchronized (TimeElection.timeElectionLock) {
+            TimeElection.isNeedContinueWait = true;
+            if (isImmediately) {
+                TimeElection.timeElectionLock.notify();
+            }
+        }
     }
 }
