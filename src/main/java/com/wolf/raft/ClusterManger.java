@@ -1,5 +1,9 @@
 package com.wolf.raft;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -11,7 +15,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author 李超
  * @since 1.0.0
  */
+@Component
 public class ClusterManger {
+
+    private Logger logger = LoggerFactory.getLogger(ClusterManger.class);
 
     private List<String> otherNodes = new ArrayList<>();
 
@@ -22,7 +29,7 @@ public class ClusterManger {
     public void init() {
 
         if (!initial.compareAndSet(false, true)) {
-            System.out.println("cluster manager has already initial!");
+            logger.info("cluster manager has already initial!");
             return;
         }
 

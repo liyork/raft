@@ -1,6 +1,8 @@
 package com.wolf.raft;
 
 import com.alibaba.fastjson.JSON;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Description:
@@ -11,11 +13,13 @@ import com.alibaba.fastjson.JSON;
  */
 public class RaftTest {
 
+    private static Logger logger = LoggerFactory.getLogger(RaftTest.class);
+
     public static void main(String[] args) throws InterruptedException {
 
 //        testBaseInit();
 //        testRest();
-        //System.out.println(TimeUnit.SECONDS.toNanos(1));
+        //logger.info(TimeUnit.SECONDS.toNanos(1));
 
 //        testFollowerHeartbeatInit();
 //        testLeaderHeartbeatInit();
@@ -26,15 +30,18 @@ public class RaftTest {
     }
 
     private static void testBaseInit() throws InterruptedException {
-        Vote.init();
+        new TimeElection().init();
     }
 
     //测试nextAwakeTime = nextAwakeTime + addElectionTime;
     //这样无线增加也不是个事！
     static int term = 1;
+
     private static void testRest() throws InterruptedException {
 
-        new Thread(()->{
+        RequestReceive requestReceive = new RequestReceive();
+
+        new Thread(() -> {
             while (true) {
                 try {
                     Thread.sleep(3000);
@@ -44,72 +51,87 @@ public class RaftTest {
 
                 Node node = new Node();
                 node.setTerm(term++);
-                RequestReceive.receive(node);
+                requestReceive.vote(node);
             }
         }).start();
 
-        Vote.init();
+        TimeElection timeElection = new TimeElection();
+        timeElection.init();
     }
 
     private static void testFollowerHeartbeatInit() throws InterruptedException {
 
-        Heartbeat.init();
+        Heartbeat heartbeat = new Heartbeat();
+        heartbeat.init();
     }
 
     private static void testLeaderHeartbeatInit() throws InterruptedException {
 
-        Container.getClusterManger().init();
-        Node localNode = Container.getClusterManger().getLocalNode();
+        ClusterManger clusterManger = getClusterManger();
+        clusterManger.init();
+        Node localNode = clusterManger.getLocalNode();
         localNode.setState(State.LEADER);
-        Heartbeat.init();
+
+        Heartbeat heartbeat = new Heartbeat();
+        heartbeat.init();
     }
 
     private static void testLeaderTurnFollowerHeartbeatInit() throws InterruptedException {
 
-        Container.getClusterManger().init();
-        Node localNode = Container.getClusterManger().getLocalNode();
+        ClusterManger clusterManger = getClusterManger();
+        clusterManger.init();
+        Node localNode = clusterManger.getLocalNode();
 
-        new Thread(()-> {
+        Heartbeat heartbeat = new Heartbeat();
+
+        new Thread(() -> {
             try {
                 Thread.sleep(3000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
-            System.out.println("turn to follower");
-            Heartbeat.turnFollower();
+            logger.info("turn to follower");
+            heartbeat.turnFollower();
 
         }).start();
 
         localNode.setState(State.LEADER);
-        Heartbeat.init();
+        heartbeat.init();
     }
 
     private static void testResponseProcessOneVote() {
 
-        Container.getClusterManger().init();
+        ClusterManger clusterManger = getClusterManger();
+        clusterManger.init();
 
-        ResponseProcess responseProcess = new ResponseProcess();
+        VoteResponseProcess voteResponseProcess = new VoteResponseProcess();
 
         Node responseNode = new Node();
         responseNode.setTerm(0);
         responseNode.setVoteFor(new Node("127.0.0.1"));
 
-        responseProcess.process(JSON.toJSONString(responseNode));
+        voteResponseProcess.process(JSON.toJSONString(responseNode));
     }
 
     private static void testResponseProcessTwoVote() {
 
-        Container.getClusterManger().init();
+        ClusterManger clusterManger = getClusterManger();
+        clusterManger.init();
 
-        ResponseProcess responseProcess = new ResponseProcess();
+        VoteResponseProcess voteResponseProcess = new VoteResponseProcess();
 
         Node responseNode = new Node();
         responseNode.setTerm(0);
         responseNode.setVoteFor(new Node("127.0.0.1"));
 
-        responseProcess.process(JSON.toJSONString(responseNode));
-        responseProcess.process(JSON.toJSONString(responseNode));
+        voteResponseProcess.process(JSON.toJSONString(responseNode));
+        voteResponseProcess.process(JSON.toJSONString(responseNode));
     }
+
+    private static ClusterManger getClusterManger() {
+        return new ClusterManger();
+    }
+
 
 }

@@ -1,5 +1,8 @@
 package com.wolf.raft;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -12,6 +15,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class TimeHelper {
 
+    private static Logger logger = LoggerFactory.getLogger(TimeHelper.class);
+
     private static Random random = new Random();
 
     //随机时间10~15
@@ -19,7 +24,7 @@ public class TimeHelper {
         int duration = random.nextInt(6);
         duration += 10;
         long result = TimeUnit.SECONDS.toNanos(duration);
-        System.out.println("genElectionTime:"+result);
+        logger.info("genElectionTime:"+result);
         return result;
     }
 
@@ -28,13 +33,8 @@ public class TimeHelper {
         int duration = random.nextInt(2);
         duration += 2;
         long result = TimeUnit.SECONDS.toNanos(duration);
-        System.out.println("genHeartbeatInterval:"+result);
+        logger.info("genHeartbeatInterval:"+result);
         return result;
     }
 
-    public static void main(String[] args) {
-
-        long convert = TimeUnit.SECONDS.toNanos(1);
-        System.out.println(convert);
-    }
 }

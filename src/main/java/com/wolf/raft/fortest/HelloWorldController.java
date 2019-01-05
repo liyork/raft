@@ -1,4 +1,4 @@
-package com.wolf.raft;
+package com.wolf.raft.fortest;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +15,6 @@ public class HelloWorldController {
 
     @RequestMapping("/hello")
     public String index() {
-        return "Hello World1";
+        return "for test start!!! Hello World1";
     }
 }

@@ -2,6 +2,10 @@ package com.wolf.raft;
 
 import com.alibaba.fastjson.JSON;
 import com.wolf.utils.HttpClientUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,7 +18,13 @@ import java.util.concurrent.TimeUnit;
  * @author 李超
  * @since 1.0.0
  */
-public class Vote {
+@Component
+public class TimeElection {
+
+    private Logger logger = LoggerFactory.getLogger(TimeElection.class);
+
+    @Autowired
+    private ClusterManger clusterManger;
 
     protected static boolean isNeedRest;
 
@@ -22,9 +32,7 @@ public class Vote {
 
     protected static final Object waitObject = new Object();
 
-    public static void init() {
-
-        Container.getClusterManger().init();
+    public void init() {
 
         new Thread(() -> {
 
@@ -36,20 +44,20 @@ public class Vote {
                     synchronized (waitObject) {
 
                         //应该醒来时间,用于再次醒来时重新计算还需睡眠时间
-                        System.out.println("before systemnano:" + System.nanoTime());
+                        logger.info("before systemnano:" + System.nanoTime());
 
                         long sleepMill = TimeUnit.MILLISECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS);
-                        System.out.println("wait sleepMill:" + TimeUnit.SECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS));
+                        logger.info("wait sleepMill:" + TimeUnit.SECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS));
                         try {
                             waitObject.wait(sleepMill);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
 
-                        System.out.println("after systemnano:" + System.nanoTime());
+                        logger.info("after systemnano:" + System.nanoTime());
 
                         if (isNeedRest) {
-                            System.out.println("isNeedRest:" + isNeedRest);
+                            logger.info("isNeedRest:" + isNeedRest);
                             isNeedRest = false;
                             sleepNanos = TimeHelper.genElectionTime();
                         } else {
@@ -58,21 +66,21 @@ public class Vote {
                     }
                 }
 
-                Node localNode = Container.getClusterManger().getLocalNode();
+                Node localNode = clusterManger.getLocalNode();
                 localNode.setState(State.CANDIDATE);
                 localNode.incrTerm();
                 localNode.setVoteFor(localNode);
 
                 //新建超时时间,准备发起投票
                 sleepNanos = TimeHelper.genElectionTime();
-                //request vote to others
-                System.out.println("vote for me!!");
 
-                ResponseProcess responseProcess = new ResponseProcess();
+                logger.info("vote for me!!");
+
+                VoteResponseProcess voteResponseProcess = new VoteResponseProcess();
                 Map<String, String> map = new HashMap<>();
                 map.put("voteNode", JSON.toJSONString(localNode));
 
-                for (String otherNodes : Container.getClusterManger().getOtherNodes()) {
+                for (String otherNodes : clusterManger.getOtherNodes()) {
 
                     ExecutorManager.execute(() -> {
 
@@ -84,7 +92,7 @@ public class Vote {
                             //投票/心跳，遇到网络问题则不管，等待下次被投票或者再发起
                         }
 
-                        responseProcess.process(response);
+                        voteResponseProcess.process(response);
                     });
                 }
             }

@@ -1,5 +1,10 @@
 package com.wolf.raft;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -10,7 +15,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author 李超
  * @since 1.0.0
  */
+@Component
 public class Heartbeat {
+
+    private Logger logger = LoggerFactory.getLogger(Heartbeat.class);
+
+    @Autowired
+    private ClusterManger clusterManger;
 
     private static long heartbeatInterval;
 
@@ -18,14 +29,12 @@ public class Heartbeat {
 
     private static AtomicBoolean initial = new AtomicBoolean();
 
-    public static void init() {
+    public void init() {
 
         if (!initial.compareAndSet(false, true)) {
-            System.out.println("heartbeat has already initial!");
+            logger.info("heartbeat has already initial!");
             return;
         }
-
-        Container.getClusterManger().init();
 
         new Thread(() -> {
 
@@ -37,13 +46,13 @@ public class Heartbeat {
 
                 synchronized (waitObject) {
 
-                    System.out.println("Heartbeat before systemnano:" + System.nanoTime());
+                    logger.info("Heartbeat before systemnano:" + System.nanoTime());
 
-                    Node localNode = Container.getClusterManger().getLocalNode();
+                    Node localNode = clusterManger.getLocalNode();
                     if (localNode.getState() == State.LEADER) {
 
                         //send heatbeat
-                        System.out.println("send heartbeat leader,wait:" + sleepMill);
+                        logger.info("send heartbeat leader,wait:" + sleepMill);
 
                         try {
                             waitObject.wait(sleepMill);
@@ -52,7 +61,7 @@ public class Heartbeat {
                         }
 
                     } else {
-                        System.out.println("send heartbeat follower,wait");
+                        logger.info("send heartbeat follower,wait");
                         try {
                             waitObject.wait();//暂时常眠，
                         } catch (InterruptedException e) {
@@ -65,9 +74,9 @@ public class Heartbeat {
 
     }
 
-    public static void turnFollower() {
+    public void turnFollower() {
 
-        Node localNode = Container.getClusterManger().getLocalNode();
+        Node localNode = clusterManger.getLocalNode();
         localNode.setState(State.FOLLOW);
 
         synchronized (waitObject) {
