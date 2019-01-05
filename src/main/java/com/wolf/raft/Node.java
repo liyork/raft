@@ -10,15 +10,15 @@ package com.wolf.raft;
 public class Node {
 
     private Node voteFor;
-    private int term;
-    private String url;
+    private int term = 1;
+    private String ipPort;
     private State state = State.FOLLOW;
 
     public Node() {
     }
 
-    public Node(String url) {
-        this.url = url;
+    public Node(String ipPort) {
+        this.ipPort = ipPort;
     }
 
     public void incrTerm() {
@@ -41,12 +41,12 @@ public class Node {
         this.term = term;
     }
 
-    public String getUrl() {
-        return url;
+    public String getIpPort() {
+        return ipPort;
     }
 
-    public void setUrl(String url) {
-        this.url = url;
+    public void setIpPort(String ipPort) {
+        this.ipPort = ipPort;
     }
 
     public State getState() {
@@ -55,6 +55,29 @@ public class Node {
 
     public void setState(State state) {
         this.state = state;
+    }
+
+    @Override
+    public String toString() {
+
+        String voteForStr = null;
+        if (null != voteFor) {
+            if (this.equals(voteFor)) {
+                voteForStr = ", voteFor{ self}";
+            } else {
+                voteForStr = ", voteFor{" +
+                        " term=" + term +
+                        ", ipPort='" + ipPort + '\'' +
+                        ", state=" + state +
+                        '}';
+            }
+        }
+
+        return "Node{" +
+                " term=" + term +
+                ", ipPort='" + ipPort + '\'' +
+                ", state=" + state + voteForStr +
+                "}";
     }
 }
 

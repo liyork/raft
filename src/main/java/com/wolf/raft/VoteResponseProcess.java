@@ -22,35 +22,38 @@ public class VoteResponseProcess {
     public void process(String response) {
 
         Node remoteNode = JSON.parseObject(response, Node.class);
+        logger.info("vote response:" + remoteNode.toString());//似乎response转换的json不对。。
         Node voteFor = remoteNode.getVoteFor();
 
         ClusterManger clusterManger = Container.getBean("clusterManger", ClusterManger.class);
         Node localNode = clusterManger.getLocalNode();
 
-        String localNodeUrl = localNode.getUrl();
+        String localNodeUrl = localNode.getIpPort();
         int localNodeTerm = localNode.getTerm();
-        String voteForUrl = voteFor.getUrl();
+        String voteForIpPort = voteFor.getIpPort();
         int voteForTerm = voteFor.getTerm();
 
-        Heartbeat heartbeat = Container.getBean("heartbeat", Heartbeat.class);
-
-        if (localNodeUrl.equals(voteForUrl) &&
-                localNodeTerm == voteForTerm) {
-            logger.info("receive vote for me,ip:" + localNodeUrl + ",term:" + localNodeTerm +
-                    ",voteCount:" + voteCount);
+        if (localNodeUrl.equals(voteForIpPort) && localNodeTerm == voteForTerm) {
 
             voteCount++;
 
-            if (voteCount > (clusterManger.size() / 2 + 1)) {
+            logger.info("receive vote for me,local ipPort:{},term:{},get voteCount:{}",
+                    localNodeUrl, localNodeTerm, voteCount);
 
-                logger.info("receive major vote,i am leader:" + localNodeUrl + ",term:" + localNodeTerm);
+            //半数(包含)以上即可成为leader
+            if (voteCount >= (clusterManger.size() / 2 + 1)) {
+
+                logger.info("receive major vote,i am leader:{},term:{}",
+                        localNodeUrl, localNodeTerm);
 
                 localNode.setState(State.LEADER);
+
+                Heartbeat heartbeat = Container.getBean("heartbeat", Heartbeat.class);
                 heartbeat.init();
             }
         } else {
-            logger.info("not vote for me,localIp:" + localNodeUrl + ",voteForUrl:" + voteForUrl +
-                    ",localTerm:" + localNodeTerm + ",voteForTerm:" + voteForTerm);
+            logger.info("not vote for me,local ipPort:{},term:{},voteFor ipPort:{},term{}",
+                    localNodeUrl, localNodeTerm, voteForIpPort, voteForTerm);
         }
     }
 

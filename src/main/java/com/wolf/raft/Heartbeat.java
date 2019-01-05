@@ -1,5 +1,6 @@
 package com.wolf.raft;
 
+import com.alibaba.fastjson.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,8 @@ public class Heartbeat {
             return;
         }
 
+        logger.info("heartbeat initial!");
+
         new Thread(() -> {
 
             heartbeatInterval = TimeHelper.genHeartbeatInterval();
@@ -46,13 +49,34 @@ public class Heartbeat {
 
                 synchronized (waitObject) {
 
-                    logger.info("Heartbeat before systemnano:" + System.nanoTime());
-
                     Node localNode = clusterManger.getLocalNode();
                     if (localNode.getState() == State.LEADER) {
 
-                        //send heatbeat
-                        logger.info("send heartbeat leader,wait:" + sleepMill);
+                        logger.info("i am leader,reset election time,send heartbeat to follower,interval:{}", sleepMill);
+
+                        //唤醒，让自己重新计数并等待//todo 可能优化，直接重置但是不唤醒，每次都重置好么？
+
+                        synchronized (TimeElection.waitObject) {
+                            TimeElection.isNeedRest = true;
+                            TimeElection.waitObject.notify();
+                        }
+
+                        String body = JSON.toJSONString(localNode);
+
+                        for (String otherNode : clusterManger.getOtherNodes()) {
+
+                            ExecutorManager.execute(() -> {
+
+                                String uri = "http://" + otherNode + "/heartbeat";
+
+                                try {
+                                    HttpClientUtil.post(uri, body);
+                                } catch (Exception e) {
+                                    //投票/心跳，遇到网络问题则不管，等待下次被投票或者再发起
+                                    logger.error("send heartbeat error,uri:" + uri + ",body:" + body, e);
+                                }
+                            });
+                        }
 
                         try {
                             waitObject.wait(sleepMill);
@@ -61,7 +85,7 @@ public class Heartbeat {
                         }
 
                     } else {
-                        logger.info("send heartbeat follower,wait");
+                        logger.info("i am not leader,waiting until become leader...");
                         try {
                             waitObject.wait();//暂时常眠，
                         } catch (InterruptedException e) {

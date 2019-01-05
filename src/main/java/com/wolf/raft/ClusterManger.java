@@ -2,9 +2,11 @@ package com.wolf.raft;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -26,6 +28,12 @@ public class ClusterManger {
 
     private AtomicBoolean initial = new AtomicBoolean();
 
+    @Value("${localIpPort}")
+    private String localIpPort;
+
+    @Value("${othersIpPort}")
+    private String othersIpPort;
+
     public void init() {
 
         if (!initial.compareAndSet(false, true)) {
@@ -33,10 +41,9 @@ public class ClusterManger {
             return;
         }
 
-        //todo 可能从某地获取
-        localNode = new Node("127.0.0.1:8080");
-        otherNodes.add("127.0.0.1:8081");
-        otherNodes.add("127.0.0.1:8082");
+        localNode = new Node(localIpPort);
+        String[] otherIpPortArr = othersIpPort.split(",");
+        otherNodes.addAll(Arrays.asList(otherIpPortArr));
     }
 
     public List<String> getOtherNodes() {

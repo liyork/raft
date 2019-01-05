@@ -3,6 +3,7 @@ package com.wolf.raft;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
 
 /**
  * Description:
@@ -11,6 +12,7 @@ import org.springframework.context.ApplicationContextAware;
  * @author 李超
  * @since 1.0.0
  */
+@Component
 public class Container implements ApplicationContextAware {
 
     private static ApplicationContext applicationContext;

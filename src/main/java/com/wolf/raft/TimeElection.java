@@ -1,14 +1,12 @@
 package com.wolf.raft;
 
 import com.alibaba.fastjson.JSON;
-import com.wolf.utils.HttpClientUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -34,6 +32,8 @@ public class TimeElection {
 
     public void init() {
 
+        Node localNode = clusterManger.getLocalNode();
+
         new Thread(() -> {
 
             sleepNanos = TimeHelper.genElectionTime();//初始睡眠时间
@@ -43,30 +43,32 @@ public class TimeElection {
                 while (sleepNanos > 0) {
                     synchronized (waitObject) {
 
-                        //应该醒来时间,用于再次醒来时重新计算还需睡眠时间
-                        logger.info("before systemnano:" + System.nanoTime());
+                        int localNodeTerm = localNode.getTerm();
 
                         long sleepMill = TimeUnit.MILLISECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS);
-                        logger.info("wait sleepMill:" + TimeUnit.SECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS));
+                        //应该醒来时间,用于再次醒来时重新计算还需睡眠时间
+                        logger.info("{} term before wait, systemnano:{},wait sleepSecond:{}",
+                                localNodeTerm, System.nanoTime(), TimeUnit.SECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS));
+
                         try {
                             waitObject.wait(sleepMill);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
 
-                        logger.info("after systemnano:" + System.nanoTime());
+                        logger.info("{} term after wait, systemnano:{}", localNodeTerm, System.nanoTime());
 
                         if (isNeedRest) {
-                            logger.info("isNeedRest:" + isNeedRest);
+                            logger.info("receive notify me,isNeedRest:" + isNeedRest);
                             isNeedRest = false;
-                            sleepNanos = TimeHelper.genElectionTime();
+                            //接收到vote或者心跳后，需要重新睡眠，不需要重新生成睡眠时间
+                            //sleepNanos = TimeHelper.genElectionTime();
                         } else {
                             sleepNanos = 0;
                         }
                     }
                 }
 
-                Node localNode = clusterManger.getLocalNode();
                 localNode.setState(State.CANDIDATE);
                 localNode.incrTerm();
                 localNode.setVoteFor(localNode);
@@ -74,25 +76,30 @@ public class TimeElection {
                 //新建超时时间,准备发起投票
                 sleepNanos = TimeHelper.genElectionTime();
 
-                logger.info("vote for me!!");
-
                 VoteResponseProcess voteResponseProcess = new VoteResponseProcess();
-                Map<String, String> map = new HashMap<>();
-                map.put("voteNode", JSON.toJSONString(localNode));
 
-                for (String otherNodes : clusterManger.getOtherNodes()) {
+                String body = JSON.toJSONString(localNode);
+
+                for (String otherNode : clusterManger.getOtherNodes()) {
 
                     ExecutorManager.execute(() -> {
 
-                        String response = null;
-                        try {
-                            response = HttpClientUtil.post(otherNodes, map);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            //投票/心跳，遇到网络问题则不管，等待下次被投票或者再发起
-                        }
+                        String uri = "http://" + otherNode + "/vote";
 
-                        voteResponseProcess.process(response);
+                        try {
+                            logger.info("send vote to follower:{}", otherNode);
+                            String response = HttpClientUtil.post(uri, body);
+                            if (!StringUtils.isEmpty(response)) {
+                                voteResponseProcess.process(response);
+                            } else {
+                                logger.info("vote response is null，uri:{},body:{}",
+                                        uri, localNode.toString());
+                            }
+
+                        } catch (Exception e) {
+                            //投票/心跳，遇到网络问题则不管，等待下次被投票或者再发起
+                            logger.error("send vote error,uri:" + uri + ",body:" + localNode.toString(), e);
+                        }
                     });
                 }
             }
