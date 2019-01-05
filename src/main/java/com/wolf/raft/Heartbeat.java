@@ -92,7 +92,7 @@ public class Heartbeat {
 
                     synchronized (heartbeatLock) {
                         try {
-                            heartbeatLock.wait();//暂时常眠，
+                            heartbeatLock.wait();//暂时常眠
                         } catch (InterruptedException e) {
                             logger.error("heartbeat wait was interrupted", e);
                         }
@@ -101,6 +101,13 @@ public class Heartbeat {
             }
         }).start();
 
+    }
+
+    public void startHeartbeat() {
+
+        synchronized (heartbeatLock) {
+            heartbeatLock.notify();
+        }
     }
 
     public void turnFollower() {

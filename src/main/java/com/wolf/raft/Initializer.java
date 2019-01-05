@@ -13,7 +13,7 @@ import javax.annotation.PostConstruct;
  * @since 1.0.0
  */
 @Component
-public class Starter {
+public class Initializer {
 
     @Autowired
     private ClusterManger clusterManger;
@@ -21,10 +21,14 @@ public class Starter {
     @Autowired
     private TimeElection timeElection;
 
+    @Autowired
+    private Heartbeat Heartbeat;
+
     @PostConstruct
     public void init() {
 
         clusterManger.init();
         timeElection.init();
+        Heartbeat.init();
     }
 }

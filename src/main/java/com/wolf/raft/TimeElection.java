@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Description:
@@ -30,7 +31,14 @@ public class TimeElection {
 
     private static final Object timeElectionLock = new Object();
 
+    private AtomicBoolean initial = new AtomicBoolean();
+
     public void init() {
+
+        if (!initial.compareAndSet(false, true)) {
+            logger.info("timeElection has already initial!");
+            return;
+        }
 
         Node localNode = clusterManger.getLocalNode();
 

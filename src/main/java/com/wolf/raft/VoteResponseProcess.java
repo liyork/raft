@@ -49,7 +49,7 @@ public class VoteResponseProcess {
                 localNode.setState(State.LEADER);
 
                 Heartbeat heartbeat = Container.getBean("heartbeat", Heartbeat.class);
-                heartbeat.init();
+                heartbeat.startHeartbeat();
             }
         } else {
             logger.info("not vote for me,local ipPort:{},term:{},voteFor ipPort:{},term{}",
