@@ -27,10 +27,16 @@ public class RequestReceive {
     @Autowired
     private TimeElection timeElection;
 
+    //todo 总是担心由于是两个线程，spirng启动Initializer的同时tomcat有线程进来，所以这里暂时是每个方法执行下init..
+    @Autowired
+    private Initializer initializer;
+
     //接收投票/心跳，比对term，响应
     //todo 可能后期分开，因为两者返回数据不一样
     @RequestMapping(path = "/vote", method = {RequestMethod.POST})
     public String vote(@RequestBody Node remoteNode) {
+
+        initializer.init();
 
         Node localNode = clusterManger.cloneLocalNode();
 
@@ -62,6 +68,8 @@ public class RequestReceive {
 
     @RequestMapping(path = "/heartbeat", method = {RequestMethod.POST})
     public void heartbeat(@RequestBody Node remoteNode) {
+
+        initializer.init();
 
         int remoteNodeTerm = remoteNode.getTerm();
 

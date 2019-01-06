@@ -121,15 +121,16 @@ public class TimeElection {
                     });
                 }
             }
-        }).start();
+        },"raft-timeElection").start();
     }
 
     protected void resetElectionTime(boolean isImmediately) {
 
-        synchronized (TimeElection.timeElectionLock) {
-            TimeElection.isNeedContinueWait = true;
+        synchronized (timeElectionLock) {
+            isNeedContinueWait = true;
             if (isImmediately) {
-                TimeElection.timeElectionLock.notify();
+                //System.out.println("isImmediately:"+isImmediately);
+                timeElectionLock.notify();
             }
         }
     }

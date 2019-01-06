@@ -19,7 +19,7 @@ public class ExecutorManager {
         @Override
         public Thread newThread(Runnable r) {
 
-            return new Thread(r, "http send thread," + (++count));
+            return new Thread(r, "http send thread-" + (++count));
         }
     });
 
