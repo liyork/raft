@@ -48,7 +48,7 @@ public class Heartbeat {
 
             for (; ; ) {
 
-                Node localNode = clusterManger.getLocalNode();
+                Node localNode = clusterManger.cloneLocalNode();
                 if (localNode.getState() == State.LEADER) {
 
                     logger.info("i am leader,set isNeedContinueWait flag,send heartbeat to follower,interval:{}", sleepMill);
@@ -112,7 +112,7 @@ public class Heartbeat {
 
     public void turnFollower() {
 
-        Node localNode = clusterManger.getLocalNode();
+        Node localNode = clusterManger.cloneLocalNode();
         localNode.setState(State.FOLLOW);
 
         synchronized (heartbeatLock) {

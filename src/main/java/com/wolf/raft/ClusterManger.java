@@ -24,7 +24,7 @@ public class ClusterManger {
 
     private List<String> otherNodes = new ArrayList<>();
 
-    private Node localNode;
+    private volatile Node localNode;
 
     private AtomicBoolean initial = new AtomicBoolean();
 
@@ -54,8 +54,15 @@ public class ClusterManger {
         this.otherNodes = otherNodes;
     }
 
-    public Node getLocalNode() {
-        return localNode;
+    //防止本jvm中所有方法都直接操作相同引用，导致取出后的数据仍有被修改的问题
+    public Node cloneLocalNode() {
+
+        Node node = new Node(localNode.getIpPort());
+        node.setVoteFor(localNode.getVoteFor());
+        node.setState(localNode.getState());
+        node.setTerm(localNode.getTerm());
+
+        return node;
     }
 
     public void setLocalNode(Node localNode) {

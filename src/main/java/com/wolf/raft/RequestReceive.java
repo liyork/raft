@@ -32,7 +32,7 @@ public class RequestReceive {
     @RequestMapping(path = "/vote", method = {RequestMethod.POST})
     public String vote(@RequestBody Node remoteNode) {
 
-        Node localNode = clusterManger.getLocalNode();
+        Node localNode = clusterManger.cloneLocalNode();
 
         int remoteNodeTerm = remoteNode.getTerm();
 
@@ -47,6 +47,7 @@ public class RequestReceive {
             localNode.setVoteFor(remoteNode);
             //不论什么状态，接收到高投票则同意并降级(非follower)
             localNode.setState(State.FOLLOW);
+            clusterManger.setLocalNode(localNode);
             //唤醒，让自己重新计数并等待
             //这个类似于Heartbeat，但是稍有不同，因为若是不唤醒，可能会延长整体服务器没有leader的时间！
             timeElection.resetElectionTime(true);
@@ -62,7 +63,7 @@ public class RequestReceive {
     @RequestMapping(path = "/heartbeat", method = {RequestMethod.POST})
     public void heartbeat(@RequestBody Node remoteNode) {
 
-        Node localNode = clusterManger.getLocalNode();
+        Node localNode = clusterManger.cloneLocalNode();
 
         int remoteNodeTerm = remoteNode.getTerm();
 
@@ -77,6 +78,7 @@ public class RequestReceive {
             localNode.setVoteFor(remoteNode);
             //不论什么状态，接收到高投票则同意并降级(非follower)
             localNode.setState(State.FOLLOW);
+            clusterManger.setLocalNode(localNode);
             //唤醒，让自己重新计数并等待//todo 可能优化，直接重置但是不唤醒
             //这个问题同vote方法，为了整体服务器能最快选举出leader，这个先保留
             timeElection.resetElectionTime(true);

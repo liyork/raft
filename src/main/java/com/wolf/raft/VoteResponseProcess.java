@@ -16,17 +16,17 @@ public class VoteResponseProcess {
     private Logger logger = LoggerFactory.getLogger(VoteResponseProcess.class);
 
     //从1开始，自己本身就是一票
-    int voteCount = 1;
+    private int voteCount = 1;
 
     //处理结果，若是同意则+1，否则不管
-    public void process(String response) {
+    public void process(String uri, String response) {
 
         Node remoteNode = JSON.parseObject(response, Node.class);
-        logger.info("vote response:" + remoteNode.toString());//似乎response转换的json不对。。
+        logger.info("request uri:{},vote response:", uri, remoteNode.toString());//似乎response转换的json不对。。
         Node voteFor = remoteNode.getVoteFor();
 
         ClusterManger clusterManger = Container.getBean("clusterManger", ClusterManger.class);
-        Node localNode = clusterManger.getLocalNode();
+        Node localNode = clusterManger.cloneLocalNode();
 
         String localNodeUrl = localNode.getIpPort();
         int localNodeTerm = localNode.getTerm();
@@ -47,6 +47,8 @@ public class VoteResponseProcess {
                         localNodeUrl, localNodeTerm);
 
                 localNode.setState(State.LEADER);
+
+                clusterManger.setLocalNode(localNode);
 
                 Heartbeat heartbeat = Container.getBean("heartbeat", Heartbeat.class);
                 heartbeat.startHeartbeat();

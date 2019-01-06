@@ -40,7 +40,7 @@ public class TimeElection {
             return;
         }
 
-        Node localNode = clusterManger.getLocalNode();
+        Node localNode = clusterManger.cloneLocalNode();
 
         new Thread(() -> {
 
@@ -82,6 +82,8 @@ public class TimeElection {
                 localNode.incrTerm();
                 localNode.setVoteFor(localNode);
 
+                clusterManger.setLocalNode(localNode);
+
                 //新建超时时间,准备发起投票
                 sleepNanos = TimeHelper.genElectionTime();
 
@@ -99,7 +101,7 @@ public class TimeElection {
                             logger.info("send vote to follower:{}", otherNode);
                             String response = HttpClientUtil.post(uri, body);
                             if (!StringUtils.isEmpty(response)) {
-                                voteResponseProcess.process(response);
+                                voteResponseProcess.process(uri,response);
                             } else {
                                 logger.info("vote response is null，uri:{},body:{}",
                                         uri, localNode.toString());

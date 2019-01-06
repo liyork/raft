@@ -69,7 +69,7 @@ public class RaftTest {
 
         ClusterManger clusterManger = getClusterManger();
         clusterManger.init();
-        Node localNode = clusterManger.getLocalNode();
+        Node localNode = clusterManger.cloneLocalNode();
         localNode.setState(State.LEADER);
 
         Heartbeat heartbeat = new Heartbeat();
@@ -80,7 +80,7 @@ public class RaftTest {
 
         ClusterManger clusterManger = getClusterManger();
         clusterManger.init();
-        Node localNode = clusterManger.getLocalNode();
+        Node localNode = clusterManger.cloneLocalNode();
 
         Heartbeat heartbeat = new Heartbeat();
 
@@ -111,7 +111,7 @@ public class RaftTest {
         responseNode.setTerm(0);
         responseNode.setVoteFor(new Node("127.0.0.1"));
 
-        voteResponseProcess.process(JSON.toJSONString(responseNode));
+        voteResponseProcess.process("http://127.0.0.1:8080/vote", JSON.toJSONString(responseNode));
     }
 
     private static void testResponseProcessTwoVote() {
@@ -125,8 +125,9 @@ public class RaftTest {
         responseNode.setTerm(0);
         responseNode.setVoteFor(new Node("127.0.0.1"));
 
-        voteResponseProcess.process(JSON.toJSONString(responseNode));
-        voteResponseProcess.process(JSON.toJSONString(responseNode));
+        String uri = "http://127.0.0.1:8080/vote";
+        voteResponseProcess.process(uri, JSON.toJSONString(responseNode));
+        voteResponseProcess.process(uri, JSON.toJSONString(responseNode));
     }
 
     private static ClusterManger getClusterManger() {
