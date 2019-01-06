@@ -22,7 +22,7 @@ public class VoteResponseProcess {
     public void process(String uri, String response) {
 
         Node remoteNode = JSON.parseObject(response, Node.class);
-        logger.info("request uri:{},vote response:", uri, remoteNode.toString());//似乎response转换的json不对。。
+        logger.info("request uri:{},vote response:{}", uri, remoteNode.toString());//似乎response转换的json不对。。
         Node voteFor = remoteNode.getVoteFor();
 
         ClusterManger clusterManger = Container.getBean("clusterManger", ClusterManger.class);
@@ -41,7 +41,7 @@ public class VoteResponseProcess {
                     localNodeUrl, localNodeTerm, voteCount);
 
             //半数(包含)以上即可成为leader
-            if (voteCount >= (clusterManger.size() / 2 + 1)) {
+            if (voteCount >= clusterManger.getMajority()) {
 
                 logger.info("receive major vote,i am leader:{},term:{}",
                         localNodeUrl, localNodeTerm);

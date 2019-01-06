@@ -34,6 +34,9 @@ public class ClusterManger {
     @Value("${othersIpPort}")
     private String othersIpPort;
 
+    //半数
+    private int majority;
+
     public void init() {
 
         if (!initial.compareAndSet(false, true)) {
@@ -41,9 +44,13 @@ public class ClusterManger {
             return;
         }
 
+        logger.info("cluster manager initial!");
+
         localNode = new Node(localIpPort);
         String[] otherIpPortArr = othersIpPort.split(",");
         otherNodes.addAll(Arrays.asList(otherIpPortArr));
+
+        majority = otherNodes.size() / 2 + 1;
     }
 
     public List<String> getOtherNodes() {
@@ -66,11 +73,16 @@ public class ClusterManger {
     }
 
     public void setLocalNode(Node localNode) {
+
         this.localNode = localNode;
     }
 
     public int size() {
         //todo 待优化
         return otherNodes.size() + 1;
+    }
+
+    public int getMajority() {
+        return majority;
     }
 }

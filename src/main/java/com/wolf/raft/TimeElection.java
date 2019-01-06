@@ -40,11 +40,13 @@ public class TimeElection {
             return;
         }
 
-        Node localNode = clusterManger.cloneLocalNode();
+        logger.info("timeElection initial!");
 
         new Thread(() -> {
 
             sleepNanos = TimeHelper.genElectionTime();//初始睡眠时间
+            //初始化
+            Node localNode = clusterManger.cloneLocalNode();
 
             for (; ; ) {
 
@@ -64,6 +66,10 @@ public class TimeElection {
                             logger.error("timeElection wait sleepMill:" + sleepMill + "was interrupted", e);
                         }
                     }
+
+                    //每次超时醒来，重新获取，查看当前localnode到哪个term了
+                    localNode = clusterManger.cloneLocalNode();
+                    //todo 是否需要状态判断？
 
                     if (isNeedContinueWait) {
                         isNeedContinueWait = false;
@@ -93,6 +99,7 @@ public class TimeElection {
 
                 for (String otherNode : clusterManger.getOtherNodes()) {
 
+                    Node finalLocalNode = localNode;
                     ExecutorManager.execute(() -> {
 
                         String uri = "http://" + otherNode + "/vote";
@@ -101,15 +108,15 @@ public class TimeElection {
                             logger.info("send vote to follower:{}", otherNode);
                             String response = HttpClientUtil.post(uri, body);
                             if (!StringUtils.isEmpty(response)) {
-                                voteResponseProcess.process(uri,response);
+                                voteResponseProcess.process(uri, response);
                             } else {
                                 logger.info("vote response is null，uri:{},body:{}",
-                                        uri, localNode.toString());
+                                        uri, finalLocalNode.toString());
                             }
 
                         } catch (Exception e) {
                             //投票/心跳，遇到网络问题则不管，等待下次被投票或者再发起
-                            logger.error("send vote error,uri:" + uri + ",body:" + localNode.toString(), e);
+                            logger.error("send vote error,uri:" + uri + ",body:" + finalLocalNode.toString(), e);
                         }
                     });
                 }

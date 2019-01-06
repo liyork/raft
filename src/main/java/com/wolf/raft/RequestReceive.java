@@ -63,16 +63,18 @@ public class RequestReceive {
     @RequestMapping(path = "/heartbeat", method = {RequestMethod.POST})
     public void heartbeat(@RequestBody Node remoteNode) {
 
-        Node localNode = clusterManger.cloneLocalNode();
-
         int remoteNodeTerm = remoteNode.getTerm();
 
+        Node localNode = clusterManger.cloneLocalNode();
         //localNode的term会同leader一样，所以直接比对，大于等于则同意
-        if (remoteNodeTerm >= localNode.getTerm()) {
+        int localNodeTerm = localNode.getTerm();
+        //todo 是否有状态前后不一致的问题？
+
+        if (remoteNodeTerm >= localNodeTerm) {
 
             logger.info("receive heartbeat,local ipPort:{},term:{},remote ipPort:{},term:{}," +
                             " remote term is bigger follower it ，and restart wait.",
-                    localNode.getIpPort(), localNode.getTerm(), remoteNode.getIpPort(), remoteNodeTerm);
+                    localNode.getIpPort(), localNodeTerm, remoteNode.getIpPort(), remoteNodeTerm);
 
             localNode.setTerm(remoteNodeTerm);
             localNode.setVoteFor(remoteNode);
@@ -85,7 +87,7 @@ public class RequestReceive {
         } else {
             logger.info("receive heartbeat,local ipPort:{},term:{},remote ipPort:{},term:{}," +
                             " remote term is smaller,not vote it.",
-                    localNode.getIpPort(), localNode.getTerm(), remoteNode.getIpPort(), remoteNodeTerm);
+                    localNode.getIpPort(), localNodeTerm, remoteNode.getIpPort(), remoteNodeTerm);
         }
     }
 }
