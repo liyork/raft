@@ -23,10 +23,10 @@ public class Initializer {
     private ClusterManger clusterManger;
 
     @Autowired
-    private TimeElection timeElection;
+    private TimeoutElectionProcessor timeoutElectionProcessor;
 
     @Autowired
-    private Heartbeat Heartbeat;
+    private HeartbeatProcessor HeartbeatProcessor;
 
     private AtomicBoolean initial = new AtomicBoolean();
 
@@ -40,7 +40,7 @@ public class Initializer {
         }
 
         clusterManger.init();
-        timeElection.init();
-        Heartbeat.init();
+        timeoutElectionProcessor.init();
+        HeartbeatProcessor.init();
     }
 }

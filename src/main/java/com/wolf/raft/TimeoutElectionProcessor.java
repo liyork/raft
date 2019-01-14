@@ -18,9 +18,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @since 1.0.0
  */
 @Component
-public class TimeElection {
+public class TimeoutElectionProcessor {
 
-    private Logger logger = LoggerFactory.getLogger(TimeElection.class);
+    private Logger logger = LoggerFactory.getLogger(TimeoutElectionProcessor.class);
 
     @Autowired
     private ClusterManger clusterManger;

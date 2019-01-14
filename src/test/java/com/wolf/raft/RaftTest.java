@@ -30,7 +30,7 @@ public class RaftTest {
     }
 
     private static void testBaseInit() throws InterruptedException {
-        new TimeElection().init();
+        new TimeoutElectionProcessor().init();
     }
 
     //测试nextAwakeTime = nextAwakeTime + addElectionTime;
@@ -55,14 +55,14 @@ public class RaftTest {
             }
         }).start();
 
-        TimeElection timeElection = new TimeElection();
-        timeElection.init();
+        TimeoutElectionProcessor timeoutElectionProcessor = new TimeoutElectionProcessor();
+        timeoutElectionProcessor.init();
     }
 
     private static void testFollowerHeartbeatInit() throws InterruptedException {
 
-        Heartbeat heartbeat = new Heartbeat();
-        heartbeat.init();
+        HeartbeatProcessor heartbeatProcessor = new HeartbeatProcessor();
+        heartbeatProcessor.init();
     }
 
     private static void testLeaderHeartbeatInit() throws InterruptedException {
@@ -72,8 +72,8 @@ public class RaftTest {
         Node localNode = clusterManger.cloneLocalNode();
         localNode.setState(State.LEADER);
 
-        Heartbeat heartbeat = new Heartbeat();
-        heartbeat.init();
+        HeartbeatProcessor heartbeatProcessor = new HeartbeatProcessor();
+        heartbeatProcessor.init();
     }
 
     private static void testLeaderTurnFollowerHeartbeatInit() throws InterruptedException {
@@ -82,7 +82,7 @@ public class RaftTest {
         clusterManger.init();
         Node localNode = clusterManger.cloneLocalNode();
 
-        Heartbeat heartbeat = new Heartbeat();
+        HeartbeatProcessor heartbeatProcessor = new HeartbeatProcessor();
 
         new Thread(() -> {
             try {
@@ -92,12 +92,12 @@ public class RaftTest {
             }
 
             logger.info("turn to follower");
-            heartbeat.turnFollower();
+            heartbeatProcessor.turnFollower();
 
         }).start();
 
         localNode.setState(State.LEADER);
-        heartbeat.init();
+        heartbeatProcessor.init();
     }
 
     private static void testResponseProcessOneVote() {

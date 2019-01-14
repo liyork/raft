@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Description:
+ * Description: 集群管理
  * <br/> Created on 12/29/2018
  *
  * @author 李超
@@ -46,19 +46,12 @@ public class ClusterManger {
 
         logger.info("cluster manager initial!");
 
+        //todo 是否考虑动态修改
         localNode = new Node(localIpPort);
         String[] otherIpPortArr = othersIpPort.split(",");
         otherNodes.addAll(Arrays.asList(otherIpPortArr));
 
         majority = otherNodes.size() / 2 + 1;
-    }
-
-    public List<String> getOtherNodes() {
-        return otherNodes;
-    }
-
-    public void setOtherNodes(List<String> otherNodes) {
-        this.otherNodes = otherNodes;
     }
 
     //防止本jvm中所有方法都直接操作相同引用，导致取出后的数据仍有被修改的问题
@@ -72,17 +65,22 @@ public class ClusterManger {
         return node;
     }
 
+    public int getMajority() {
+        return majority;
+    }
+
+    //===get/set
+
+    public List<String> getOtherNodes() {
+        return otherNodes;
+    }
+
+    public void setOtherNodes(List<String> otherNodes) {
+        this.otherNodes = otherNodes;
+    }
+
     public void setLocalNode(Node localNode) {
 
         this.localNode = localNode;
-    }
-
-    public int size() {
-        //todo 待优化
-        return otherNodes.size() + 1;
-    }
-
-    public int getMajority() {
-        return majority;
     }
 }

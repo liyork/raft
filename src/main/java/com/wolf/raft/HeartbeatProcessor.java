@@ -10,22 +10,22 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Description:
+ * Description: 心跳处理器，定期发送
  * <br/> Created on 12/29/2018
  *
  * @author 李超
  * @since 1.0.0
  */
 @Component
-public class Heartbeat {
+public class HeartbeatProcessor {
 
-    private Logger logger = LoggerFactory.getLogger(Heartbeat.class);
+    private Logger logger = LoggerFactory.getLogger(HeartbeatProcessor.class);
 
     @Autowired
     private ClusterManger clusterManger;
 
     @Autowired
-    private TimeElection timeElection;
+    private TimeoutElectionProcessor timeoutElectionProcessor;
 
     private static final Object heartbeatLock = new Object();
 
@@ -60,7 +60,7 @@ public class Heartbeat {
                     //当选leader，若是设置重新计算选举超时并不唤醒，那么可能心跳线程出现问题，那么可能"下次选举时间"会边长,
                     // 因为是本次剩余时间+超时时间，无非就是影响下次再发起投票的时间，可能被别人投票了，优化一下，暂时不唤醒，
                     // 关键感觉每次heartbeat都会触发TimeElection唤醒再睡眠，似乎有cpu上下文切换线程问题
-                    timeElection.resetElectionTime(false);
+                    timeoutElectionProcessor.resetElectionTime(false);
 
                     String body = JSON.toJSONString(localNode);
 

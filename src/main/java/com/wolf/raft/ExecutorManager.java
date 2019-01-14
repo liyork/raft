@@ -5,7 +5,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * Description:
+ * Description: 执行器管理，用于都线程发送http命令
  * <br/> Created on 1/5/2019
  *
  * @author 李超

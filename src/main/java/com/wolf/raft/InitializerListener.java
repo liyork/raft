@@ -16,7 +16,7 @@ public class InitializerListener implements ApplicationListener<ApplicationReady
     public void onApplicationEvent(ApplicationReadyEvent  event) {
         System.out.println(Thread.currentThread().getName()+"_#####InitializerListener found!#####");
 
-        Initializer initializer = Container.getBean("initializer",Initializer.class);
+        Initializer initializer = RaftContainer.getBean("initializer",Initializer.class);
         initializer.init();
     }
 }

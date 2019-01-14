@@ -25,7 +25,7 @@ public class VoteResponseProcess {
         logger.info("request uri:{},vote response:{}", uri, remoteNode.toString());//似乎response转换的json不对。。
         Node voteFor = remoteNode.getVoteFor();
 
-        ClusterManger clusterManger = Container.getBean("clusterManger", ClusterManger.class);
+        ClusterManger clusterManger = RaftContainer.getBean("clusterManger", ClusterManger.class);
         Node localNode = clusterManger.cloneLocalNode();
 
         String localNodeUrl = localNode.getIpPort();
@@ -50,8 +50,8 @@ public class VoteResponseProcess {
 
                 clusterManger.setLocalNode(localNode);
 
-                Heartbeat heartbeat = Container.getBean("heartbeat", Heartbeat.class);
-                heartbeat.startHeartbeat();
+                HeartbeatProcessor heartbeatProcessor = RaftContainer.getBean("heartbeat", HeartbeatProcessor.class);
+                heartbeatProcessor.startHeartbeat();
             }
         } else {
             logger.info("not vote for me,local ipPort:{},term:{},voteFor ipPort:{},term{}",
