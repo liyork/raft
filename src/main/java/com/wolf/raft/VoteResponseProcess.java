@@ -27,7 +27,6 @@ public class VoteResponseProcess {
 
         ClusterManger clusterManger = RaftContainer.getBean("clusterManger", ClusterManger.class);
         Node cloneLocalNode = clusterManger.cloneLocalNode();
-        Node localNode = clusterManger.getLocalNode();
 
         String localNodeUrl = cloneLocalNode.getIpPort();
         int localNodeTerm = cloneLocalNode.getTerm();
@@ -49,8 +48,8 @@ public class VoteResponseProcess {
 
                 cloneLocalNode.setState(State.LEADER);
 
-                //有人在我接受投票响应的过程中，修改了状态，本次投票不再生效
-                if(!clusterManger.cas(localNode,cloneLocalNode)){
+                //有人在我接受投票响应的过程中，修改了状态，且我已经同意，本次不再成为leader
+                if(!clusterManger.cas(cloneLocalNode.getSource(),cloneLocalNode)){
                     return;
                 }
 

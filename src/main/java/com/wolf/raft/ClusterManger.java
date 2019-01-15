@@ -58,10 +58,13 @@ public class ClusterManger {
     //防止本jvm中所有方法都直接操作相同引用，导致取出后的数据仍有被修改的问题
     public Node cloneLocalNode() {
 
-        Node node = new Node(localNode.get().getIpPort());
-        node.setVoteFor(localNode.get().getVoteFor());
-        node.setState(localNode.get().getState());
-        node.setTerm(localNode.get().getTerm());
+        Node source = localNode.get();
+
+        Node node = new Node(source.getIpPort());
+        node.setVoteFor(source.getVoteFor());
+        node.setState(source.getState());
+        node.setTerm(source.getTerm());
+        node.setSource(source);
 
         return node;
     }

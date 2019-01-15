@@ -47,7 +47,6 @@ public class TimeoutElectionProcessor {
             sleepNanos = TimeHelper.genElectionTime();//初始睡眠时间
             //初始化
             Node cloneLocalNode = clusterManger.cloneLocalNode();
-            Node localNode = null;
 
             for (; ; ) {
 
@@ -70,9 +69,8 @@ public class TimeoutElectionProcessor {
 
                     //每次超时醒来，重新获取，查看当前localnode到哪个term了
                     cloneLocalNode = clusterManger.cloneLocalNode();
-                    localNode = clusterManger.getLocalNode();
 
-                    //todo 是否需要状态判断？应该不用，有isNeedContinueWait字段了。
+                    //todo 是否需要状态判断？应该不用，有isNeedContinueWait字段了，若有高term则必然修改此字段，
                     if (isNeedContinueWait) {
                         isNeedContinueWait = false;
                         //接收到vote或者心跳后，需要重新睡眠，不需要重新生成睡眠时间，
@@ -86,25 +84,18 @@ public class TimeoutElectionProcessor {
                             localNodeTerm, System.nanoTime(), sleepNanos);
                 }
 
-                //防止并发修改状态导致的异常数据，同步
-//                synchronized (statusLock) {
-//                    cloneLocalNode = clusterManger.getLocalNode();
-//                    if (cloneLocalNode.getState().equals(State.FOLLOW)) {
-//                        continue;
-//                    }
-//                }
-
                 cloneLocalNode.setState(State.CANDIDATE);
                 cloneLocalNode.incrTerm();
                 cloneLocalNode.setVoteFor(cloneLocalNode);
 
-                if (!clusterManger.cas(localNode, cloneLocalNode)) {
-                    isNeedContinueWait = true;
-                   continue;
-                }
-
                 //新建超时时间,准备发起投票
                 sleepNanos = TimeHelper.genElectionTime();
+
+                //准备修改前，若是有人(高term的投票或心跳)修改，那么表明这次醒来后到准备投票之间存在其他高term修改
+                // 自己状态，自己同意了，所以就等待下轮超时吧。
+                if (!clusterManger.cas(cloneLocalNode.getSource(), cloneLocalNode)) {
+                    continue;
+                }
 
                 VoteResponseProcess voteResponseProcess = new VoteResponseProcess();
 
@@ -134,7 +125,7 @@ public class TimeoutElectionProcessor {
                     });
                 }
             }
-        },"raft-timeElection").start();
+        }, "raft-timeElection").start();
     }
 
     protected void resetElectionTime(boolean isImmediately) {

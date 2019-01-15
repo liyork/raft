@@ -15,6 +15,8 @@ public class Node {
     private int term = 1;
     private String ipPort;
     private State state = State.FOLLOW;
+    //目前只允许用来查看和对比的，不允许直接修改
+    private Node source;
 
     public Node() {
     }
@@ -57,6 +59,14 @@ public class Node {
 
     public void setState(State state) {
         this.state = state;
+    }
+
+    public Node getSource() {
+        return source;
+    }
+
+    public void setSource(Node source) {
+        this.source = source;
     }
 
     @Override

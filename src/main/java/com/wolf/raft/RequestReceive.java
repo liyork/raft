@@ -39,7 +39,6 @@ public class RequestReceive {
         initializer.init();
 
         Node cloneLocalNode = clusterManger.cloneLocalNode();
-        Node localNode = clusterManger.getLocalNode();
 
         int remoteNodeTerm = remoteNode.getTerm();
 
@@ -54,10 +53,12 @@ public class RequestReceive {
             cloneLocalNode.setVoteFor(remoteNode);
             //不论什么状态，接收到高投票则同意并降级(非follower)
             cloneLocalNode.setState(State.FOLLOW);
-            //若收到投票请求后，与此同时，自己超时选举那边已经获得多数投票变成leader，那么以最快的为准
-            if(!clusterManger.cas(localNode,cloneLocalNode)){
-                return JSON.toJSONString(localNode);
+
+            //有并发的修改，可能是发起投票、收到投票、成为leader，肯定是高term，若自己修改不成功，那么以高(快)的为准
+            if(!clusterManger.cas(cloneLocalNode.getSource(),cloneLocalNode)){
+                return JSON.toJSONString(cloneLocalNode.getSource());
             }
+
             //唤醒，让自己重新计数并等待
             //这个类似于Heartbeat，但是稍有不同，因为若是不唤醒，可能会延长整体服务器没有leader的时间！
             timeoutElectionProcessor.resetElectionTime(true);
@@ -78,7 +79,6 @@ public class RequestReceive {
         int remoteNodeTerm = remoteNode.getTerm();
 
         Node cloneLocalNode = clusterManger.cloneLocalNode();
-        Node localNode = clusterManger.getLocalNode();
 
         //localNode的term会同leader一样，所以直接比对，大于等于则同意
         int localNodeTerm = cloneLocalNode.getTerm();
@@ -94,7 +94,9 @@ public class RequestReceive {
             cloneLocalNode.setVoteFor(remoteNode);
             //不论什么状态，接收到高投票则同意并降级(非follower)
             cloneLocalNode.setState(State.FOLLOW);
-            if(!clusterManger.cas(localNode,cloneLocalNode)){
+
+            //有并发的修改，可能是发起投票、收到投票、成为leader，肯定是高term，若自己修改不成功，那么以高(快)的为准
+            if(!clusterManger.cas(cloneLocalNode.getSource(),cloneLocalNode)){
                 return;
             }
             //唤醒，让自己重新计数并等待//todo 可能优化，直接重置但是不唤醒
