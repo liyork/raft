@@ -25,7 +25,7 @@ public class TimeoutElectionProcessor {
     @Autowired
     private ClusterManger clusterManger;
 
-    protected static boolean isNeedContinueWait;
+    protected static volatile boolean isNeedContinueWait;
 
     private static long sleepNanos;
 
@@ -46,13 +46,14 @@ public class TimeoutElectionProcessor {
 
             sleepNanos = TimeHelper.genElectionTime();//初始睡眠时间
             //初始化
-            Node localNode = clusterManger.cloneLocalNode();
+            Node cloneLocalNode = clusterManger.cloneLocalNode();
+            Node localNode = null;
 
             for (; ; ) {
 
                 while (sleepNanos > 0) {
 
-                    int localNodeTerm = localNode.getTerm();
+                    int localNodeTerm = cloneLocalNode.getTerm();
 
                     long sleepMill = TimeUnit.MILLISECONDS.convert(sleepNanos, TimeUnit.NANOSECONDS);
                     //应该醒来时间,用于再次醒来时重新计算还需睡眠时间
@@ -68,9 +69,10 @@ public class TimeoutElectionProcessor {
                     }
 
                     //每次超时醒来，重新获取，查看当前localnode到哪个term了
-                    localNode = clusterManger.cloneLocalNode();
-                    //todo 是否需要状态判断？
+                    cloneLocalNode = clusterManger.cloneLocalNode();
+                    localNode = clusterManger.getLocalNode();
 
+                    //todo 是否需要状态判断？应该不用，有isNeedContinueWait字段了。
                     if (isNeedContinueWait) {
                         isNeedContinueWait = false;
                         //接收到vote或者心跳后，需要重新睡眠，不需要重新生成睡眠时间，
@@ -84,22 +86,33 @@ public class TimeoutElectionProcessor {
                             localNodeTerm, System.nanoTime(), sleepNanos);
                 }
 
-                localNode.setState(State.CANDIDATE);
-                localNode.incrTerm();
-                localNode.setVoteFor(localNode);
+                //防止并发修改状态导致的异常数据，同步
+//                synchronized (statusLock) {
+//                    cloneLocalNode = clusterManger.getLocalNode();
+//                    if (cloneLocalNode.getState().equals(State.FOLLOW)) {
+//                        continue;
+//                    }
+//                }
 
-                clusterManger.setLocalNode(localNode);
+                cloneLocalNode.setState(State.CANDIDATE);
+                cloneLocalNode.incrTerm();
+                cloneLocalNode.setVoteFor(cloneLocalNode);
+
+                if (!clusterManger.cas(localNode, cloneLocalNode)) {
+                    isNeedContinueWait = true;
+                   continue;
+                }
 
                 //新建超时时间,准备发起投票
                 sleepNanos = TimeHelper.genElectionTime();
 
                 VoteResponseProcess voteResponseProcess = new VoteResponseProcess();
 
-                String body = JSON.toJSONString(localNode);
+                String body = JSON.toJSONString(cloneLocalNode);
 
                 for (String otherNode : clusterManger.getOtherNodes()) {
 
-                    Node finalLocalNode = localNode;
+                    Node finalLocalNode = cloneLocalNode;
                     ExecutorManager.execute(() -> {
 
                         String uri = "http://" + otherNode + "/vote";

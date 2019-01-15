@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Description: 集群管理
@@ -24,7 +25,7 @@ public class ClusterManger {
 
     private List<String> otherNodes = new ArrayList<>();
 
-    private volatile Node localNode;
+    private volatile AtomicReference<Node> localNode;
 
     private AtomicBoolean initial = new AtomicBoolean();
 
@@ -47,7 +48,7 @@ public class ClusterManger {
         logger.info("cluster manager initial!");
 
         //todo 是否考虑动态修改
-        localNode = new Node(localIpPort);
+        localNode = new AtomicReference<Node>(new Node(localIpPort));
         String[] otherIpPortArr = othersIpPort.split(",");
         otherNodes.addAll(Arrays.asList(otherIpPortArr));
 
@@ -57,12 +58,19 @@ public class ClusterManger {
     //防止本jvm中所有方法都直接操作相同引用，导致取出后的数据仍有被修改的问题
     public Node cloneLocalNode() {
 
-        Node node = new Node(localNode.getIpPort());
-        node.setVoteFor(localNode.getVoteFor());
-        node.setState(localNode.getState());
-        node.setTerm(localNode.getTerm());
+        Node node = new Node(localNode.get().getIpPort());
+        node.setVoteFor(localNode.get().getVoteFor());
+        node.setState(localNode.get().getState());
+        node.setTerm(localNode.get().getTerm());
 
         return node;
+    }
+
+
+    //提供查看，但是不能修改！
+    public Node getLocalNode() {
+
+        return localNode.get();
     }
 
     public int getMajority() {
@@ -79,8 +87,12 @@ public class ClusterManger {
         this.otherNodes = otherNodes;
     }
 
-    public void setLocalNode(Node localNode) {
+    public boolean cas(Node expect, Node update) {
 
-        this.localNode = localNode;
+        return this.localNode.compareAndSet(expect, update);
+    }
+
+    public void setLocalNode(Node localNode) {
+        this.localNode = new AtomicReference<>(localNode);
     }
 }

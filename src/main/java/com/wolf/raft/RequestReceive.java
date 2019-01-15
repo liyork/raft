@@ -38,32 +38,36 @@ public class RequestReceive {
 
         initializer.init();
 
-        Node localNode = clusterManger.cloneLocalNode();
+        Node cloneLocalNode = clusterManger.cloneLocalNode();
+        Node localNode = clusterManger.getLocalNode();
 
         int remoteNodeTerm = remoteNode.getTerm();
 
         //localNode的term会同leader一样，所以直接比对
-        if (remoteNodeTerm > localNode.getTerm()) {
+        if (remoteNodeTerm > cloneLocalNode.getTerm()) {
 
             logger.info("receive vote,local ipPort:{},term:{},remote ipPort:{},term:{}," +
                             " remote term is bigger,vote it，and restart wait.",
-                    localNode.getIpPort(), localNode.getTerm(), remoteNode.getIpPort(), remoteNodeTerm);
+                    cloneLocalNode.getIpPort(), cloneLocalNode.getTerm(), remoteNode.getIpPort(), remoteNodeTerm);
 
-            localNode.setTerm(remoteNodeTerm);
-            localNode.setVoteFor(remoteNode);
+            cloneLocalNode.setTerm(remoteNodeTerm);
+            cloneLocalNode.setVoteFor(remoteNode);
             //不论什么状态，接收到高投票则同意并降级(非follower)
-            localNode.setState(State.FOLLOW);
-            clusterManger.setLocalNode(localNode);
+            cloneLocalNode.setState(State.FOLLOW);
+            //若收到投票请求后，与此同时，自己超时选举那边已经获得多数投票变成leader，那么以最快的为准
+            if(!clusterManger.cas(localNode,cloneLocalNode)){
+                return JSON.toJSONString(localNode);
+            }
             //唤醒，让自己重新计数并等待
             //这个类似于Heartbeat，但是稍有不同，因为若是不唤醒，可能会延长整体服务器没有leader的时间！
             timeoutElectionProcessor.resetElectionTime(true);
         } else {
             logger.info("receive vote,local ipPort:{},term:{},remote ipPort:{},term:{}," +
                             " remote term is smaller,not vote it.",
-                    localNode.getIpPort(), localNode.getTerm(), remoteNode.getIpPort(), remoteNodeTerm);
+                    cloneLocalNode.getIpPort(), cloneLocalNode.getTerm(), remoteNode.getIpPort(), remoteNodeTerm);
         }
 
-        return JSON.toJSONString(localNode);
+        return JSON.toJSONString(cloneLocalNode);
     }
 
     @RequestMapping(path = "/heartbeat", method = {RequestMethod.POST})
@@ -73,29 +77,33 @@ public class RequestReceive {
 
         int remoteNodeTerm = remoteNode.getTerm();
 
-        Node localNode = clusterManger.cloneLocalNode();
+        Node cloneLocalNode = clusterManger.cloneLocalNode();
+        Node localNode = clusterManger.getLocalNode();
+
         //localNode的term会同leader一样，所以直接比对，大于等于则同意
-        int localNodeTerm = localNode.getTerm();
+        int localNodeTerm = cloneLocalNode.getTerm();
         //todo 是否有状态前后不一致的问题？
 
         if (remoteNodeTerm >= localNodeTerm) {
 
             logger.info("receive heartbeat,local ipPort:{},term:{},remote ipPort:{},term:{}," +
                             " remote term is bigger follower it ，and restart wait.",
-                    localNode.getIpPort(), localNodeTerm, remoteNode.getIpPort(), remoteNodeTerm);
+                    cloneLocalNode.getIpPort(), localNodeTerm, remoteNode.getIpPort(), remoteNodeTerm);
 
-            localNode.setTerm(remoteNodeTerm);
-            localNode.setVoteFor(remoteNode);
+            cloneLocalNode.setTerm(remoteNodeTerm);
+            cloneLocalNode.setVoteFor(remoteNode);
             //不论什么状态，接收到高投票则同意并降级(非follower)
-            localNode.setState(State.FOLLOW);
-            clusterManger.setLocalNode(localNode);
+            cloneLocalNode.setState(State.FOLLOW);
+            if(!clusterManger.cas(localNode,cloneLocalNode)){
+                return;
+            }
             //唤醒，让自己重新计数并等待//todo 可能优化，直接重置但是不唤醒
             //这个问题同vote方法，为了整体服务器能最快选举出leader，这个先保留
             timeoutElectionProcessor.resetElectionTime(true);
         } else {
             logger.info("receive heartbeat,local ipPort:{},term:{},remote ipPort:{},term:{}," +
                             " remote term is smaller,not vote it.",
-                    localNode.getIpPort(), localNodeTerm, remoteNode.getIpPort(), remoteNodeTerm);
+                    cloneLocalNode.getIpPort(), localNodeTerm, remoteNode.getIpPort(), remoteNodeTerm);
         }
     }
 }

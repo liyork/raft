@@ -26,10 +26,11 @@ public class VoteResponseProcess {
         Node voteFor = remoteNode.getVoteFor();
 
         ClusterManger clusterManger = RaftContainer.getBean("clusterManger", ClusterManger.class);
-        Node localNode = clusterManger.cloneLocalNode();
+        Node cloneLocalNode = clusterManger.cloneLocalNode();
+        Node localNode = clusterManger.getLocalNode();
 
-        String localNodeUrl = localNode.getIpPort();
-        int localNodeTerm = localNode.getTerm();
+        String localNodeUrl = cloneLocalNode.getIpPort();
+        int localNodeTerm = cloneLocalNode.getTerm();
         String voteForIpPort = voteFor.getIpPort();
         int voteForTerm = voteFor.getTerm();
 
@@ -46,9 +47,12 @@ public class VoteResponseProcess {
                 logger.info("receive major vote,i am leader:{},term:{}",
                         localNodeUrl, localNodeTerm);
 
-                localNode.setState(State.LEADER);
+                cloneLocalNode.setState(State.LEADER);
 
-                clusterManger.setLocalNode(localNode);
+                //有人在我接受投票响应的过程中，修改了状态，本次投票不再生效
+                if(!clusterManger.cas(localNode,cloneLocalNode)){
+                    return;
+                }
 
                 HeartbeatProcessor heartbeatProcessor = RaftContainer.getBean("heartbeat", HeartbeatProcessor.class);
                 heartbeatProcessor.startHeartbeat();
